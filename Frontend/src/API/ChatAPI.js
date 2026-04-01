@@ -5,46 +5,63 @@ import API from "./api";
    SEND AGENT MESSAGE
 ======================== */
 export const sendReply = async (to, message, force = false) => {
-  return await API.post("/agent/reply", {
+  const res = await API.post("/agent/reply", {
     to,
     message,
-    force,
+    force, // 🔥 ADD THIS
   });
-};
 
+  return res.data;
+};
+/* ========================
+   END CHAT
+======================== */
 export const endSession = async (conversation_id) => {
-  return await API.post("/agent/end", { conversation_id });
+  const res = await API.post("/agent/end", {
+    conversation_id,
+  });
+
+  return res.data;
 };
 
+/* ========================
+   ASSIGN CHAT
+======================== */
 export const assignChat = async (conversation_id, force = false) => {
   const res = await API.post("/agent/assign", {
     conversation_id,
-    force,
+    force, // 🔥 added here
   });
-  return res.data; // ✅ important
+
+  return res.data;
 };
 
-export const reopenChat = async (conversation_id) => {
-  return await API.post("/agent/reopen", { conversation_id });
-};
 /* ========================
    REOPEN CHAT
 ======================== */
+export const reopenChat = async (conversation_id) => {
+  const res = await API.post("/agent/reopen", {
+    conversation_id,
+  });
+
+  return res.data;
+};
+
 /* ========================
    FETCH CONVERSATIONS
 ======================== */
 export const fetchConversations = async () => {
-  return await API.get("/webhook/conversations"); // ✅ no .data
+  const res = await API.get("/webhook/conversations");
+  return res.data;
 };
 
 /* ========================
    FETCH MESSAGES
 ======================== */
 export const fetchMessages = async (conversation_id) => {
-  return await API.get(
-    `/webhook/conversations/${conversation_id}/messages`
-  ); // ✅ no .data
+  const res = await API.get(
+    `/webhook/conversations/${conversation_id}/messages`,
+  );
+
+  return res.data;
 };
-/* ========================
-   FETCH MESSAGES
-======================== */

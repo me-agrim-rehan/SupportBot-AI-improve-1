@@ -2,12 +2,14 @@ import API from "./api";
 
 /* 🔐 LOGIN */
 export const loginUser = async (data) => {
-  return await API.post("/auth/login", data);
+  const res = await API.post("/auth/login", data);
+  return res.data;
 };
 
 /* 👤 CURRENT USER */
 export const getCurrentUser = async () => {
-  return await API.get("/auth/me");
+  const res = await API.get("/auth/me");
+  return res.data;
 };
 
 /* 🚪 LOGOUT */

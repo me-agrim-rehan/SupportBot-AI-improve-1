@@ -130,7 +130,7 @@ function ChatSpace() {
       openModal(
         `Take over chat from ${selectedChat.assigned_role}?`,
         async () => {
-          await assignChat(selectedChat.id, true); // ✅ FIXED
+          await assignChat(selectedChat.id);
         },
       );
       return;
@@ -158,6 +158,7 @@ function ChatSpace() {
     <div className={styles.container}>
       {/* Sidebar */}
       <div className={styles.sidebar}>
+
         <div className={styles.sidebarHeader}>
           <img src="images/logo.png" className={styles.logo} />
           <h3>Conversations</h3>
@@ -170,9 +171,8 @@ function ChatSpace() {
           return (
             <div
               key={chat.id}
-              className={`${styles.userItem} ${
-                selectedChat?.id === chat.id ? styles.activeUser : ""
-              } ${isOwnedByOther ? styles.lockedChat : ""}`}
+              className={`${styles.userItem} ${selectedChat?.id === chat.id ? styles.activeUser : ""
+                } ${isOwnedByOther ? styles.lockedChat : ""}`}
               onClick={() => handleSelectChat(chat)}
             >
               <div>

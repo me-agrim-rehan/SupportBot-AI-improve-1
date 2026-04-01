@@ -9,39 +9,28 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    try {
-      const res = await loginUser({ email, password });
+    const res = await loginUser({ email, password });
 
-      if (res.success) {
-        // ✅ Store token (IMPORTANT)
-        localStorage.setItem("token", res.token);
-
-        // ✅ Store user
-        localStorage.setItem("user", JSON.stringify(res.user));
-
-        navigate("/dashboard");
-      } else {
-        alert(res.error || "Login failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Login failed");
+    if (res.success) {
+      localStorage.setItem("user", JSON.stringify(res.user));
+      navigate("/");
+    } else {
+      alert(res.error || "Login failed");
     }
   };
 
   return (
     <div className={styles.page}>
-      
       {/* TOP BAR */}
       <div className={styles.topBar}>
         <div className={styles.topLogo}></div>
+        {/* Put your header logo inside topLogo */}
       </div>
 
       {/* CENTER LOGIN CARD */}
       <div className={styles.center}>
         <div className={styles.card}>
-
-          {/* LEFT PANEL */}
+          {/* GREEN PANEL */}
           <div className={styles.left}>
             <div>
               Experts <br />
@@ -52,14 +41,11 @@ export default function Login() {
 
           {/* RIGHT PANEL */}
           <div className={styles.right}>
-
             {/* LOGO */}
             <div className={styles.logo}></div>
 
             {/* SUB TEXT */}
-            <div className={styles.subText}>
-              Access the support system
-            </div>
+            <div className={styles.subText}>Access the support system</div>
 
             {/* EMAIL */}
             <div className={styles.label}>Email</div>
@@ -79,13 +65,9 @@ export default function Login() {
             />
 
             {/* LOGIN BUTTON */}
-            <button
-              className={styles.button}
-              onClick={handleLogin}
-            >
+            <button className={styles.button} onClick={handleLogin}>
               LOGIN
             </button>
-
           </div>
         </div>
       </div>
@@ -107,7 +89,6 @@ export default function Login() {
           © 2023 GET Global Group. All Rights Reserved.
         </div>
       </div>
-
     </div>
   );
 }
