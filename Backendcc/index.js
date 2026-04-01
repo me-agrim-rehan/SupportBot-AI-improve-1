@@ -15,7 +15,7 @@ const PgSession = pgSession(session);
 dotenv.config();
 
 const app = express();
-app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -25,7 +25,7 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-  }),
+  })
 );
 app.use(
   session({
@@ -41,10 +41,10 @@ app.use(
     rolling: true,
     cookie: {
       httpOnly: true,
-      secure: false, // 🔥 IMPORTANT
-      sameSite: "lax", // 🔥 IMPORTANT
-      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    },
+      secure: true,          // ✅ MUST be true on HTTPS (Render)
+      sameSite: "none",      // ✅ MUST be none for cross-origin
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    }
   }),
 );
 app.get("/", (req, res) => {
