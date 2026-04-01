@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../../API/LoginAPI";
+import styles from "./styles/Login.module.css";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,9 +13,10 @@ export default function Login() {
       const res = await loginUser({ email, password });
 
       if (res.success) {
-        // 🔥 MUST HAVE THIS
+        // ✅ Store token (IMPORTANT)
         localStorage.setItem("token", res.token);
 
+        // ✅ Store user
         localStorage.setItem("user", JSON.stringify(res.user));
 
         navigate("/chat");
@@ -28,25 +30,84 @@ export default function Login() {
   };
 
   return (
-    <div style={{ padding: 40 }}>
-      <h2>Login</h2>
+    <div className={styles.page}>
+      
+      {/* TOP BAR */}
+      <div className={styles.topBar}>
+        <div className={styles.topLogo}></div>
+      </div>
 
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br />
+      {/* CENTER LOGIN CARD */}
+      <div className={styles.center}>
+        <div className={styles.card}>
 
-      <input
-        placeholder="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <br />
+          {/* LEFT PANEL */}
+          <div className={styles.left}>
+            <div>
+              Experts <br />
+              On <br />
+              Demand
+            </div>
+          </div>
 
-      <button onClick={handleLogin}>Login</button>
+          {/* RIGHT PANEL */}
+          <div className={styles.right}>
+
+            {/* LOGO */}
+            <div className={styles.logo}></div>
+
+            {/* SUB TEXT */}
+            <div className={styles.subText}>
+              Access the support system
+            </div>
+
+            {/* EMAIL */}
+            <div className={styles.label}>Email</div>
+            <input
+              className={styles.input}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+
+            {/* PASSWORD */}
+            <div className={styles.label}>Password</div>
+            <input
+              className={styles.input}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+
+            {/* LOGIN BUTTON */}
+            <button
+              className={styles.button}
+              onClick={handleLogin}
+            >
+              LOGIN
+            </button>
+
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div className={styles.footer}>
+        <div className={styles.links}>
+          <span>Contact Us</span>
+          <span>About Us</span>
+          <span>Our Services</span>
+        </div>
+
+        <div className={styles.links}>
+          <span>Privacy Policy</span>
+          <span>Terms and Conditions</span>
+        </div>
+
+        <div className={styles.copyright}>
+          © 2023 GET Global Group. All Rights Reserved.
+        </div>
+      </div>
+
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// Backend/middleware/Auth.js
+// Backend/middleware/auth.js
 import jwt from "jsonwebtoken";
 
 /**

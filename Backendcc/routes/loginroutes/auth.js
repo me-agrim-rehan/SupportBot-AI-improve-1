@@ -64,11 +64,9 @@ router.post("/login", async (req, res) => {
 /**
  * 👤 GET CURRENT USER
  */
-router.get("/me", async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
+import { requireAuth } from "../../middleware/auth.js";
 
+router.get("/me", requireAuth, async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT u.id, u.name, u.role, u.department_id, u.country_id,
@@ -76,7 +74,7 @@ router.get("/me", async (req, res) => {
        FROM users u
        LEFT JOIN departments d ON u.department_id = d.id
        WHERE u.id = $1`,
-      [ req.session.user.id ],
+      [ req.user.id ] // ✅ FIXED
     );
 
     const user = result.rows[ 0 ];
@@ -85,25 +83,24 @@ router.get("/me", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 🔥 keep session fresh
-    req.session.user.department = user.department_name;
-
     res.json({
-      ...req.session.user,
+      id: user.id,
+      name: user.name,
+      role: user.role,
+      department_id: user.department_id,
+      country_id: user.country_id,
       department: user.department_name,
     });
   } catch (err) {
+    console.error("❌ /me error:", err);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
-
 /**
  * 🚪 LOGOUT
  */
 router.post("/logout", (req, res) => {
-  req.session.destroy(() => {
-    res.json({ success: true });
-  });
+  res.json({ success: true });
 });
 
 export default router;
