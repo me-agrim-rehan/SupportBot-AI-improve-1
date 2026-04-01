@@ -1,7 +1,6 @@
 // Frontend/src/API/api.js
 
 const BASE_URL = import.meta.env.VITE_BACKEND_URL;
-
 const fetchWrapper = async (endpoint, options = {}) => {
   const controller = new AbortController();
   const timeout = 10000;
@@ -9,40 +8,27 @@ const fetchWrapper = async (endpoint, options = {}) => {
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
+    const token = localStorage.getItem("token"); // ✅ MOVE HERE
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      credentials: "include", // 🔥 same as withCredentials
       headers: {
         "Content-Type": "application/json",
+        Authorization: token ? `Bearer ${token}` : "",
         ...(options.headers || {}),
       },
-      signal: controller.signal,
       ...options,
     });
 
     clearTimeout(id);
 
-    const data = await response.json().catch(() => ({}));
-
     if (!response.ok) {
-      // mimic axios error
-      throw {
-        response: {
-          status: response.status,
-          data,
-        },
-      };
+      throw new Error(`API error: ${response.status}`);
     }
 
-    // mimic axios response
-    return {
-      data,
-      status: response.status,
-    };
-  } catch (err) {
-    if (err.name === "AbortError") {
-      throw { message: "Request timeout" };
-    }
-    throw err;
+    return await response.json();
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
   }
 };
 

@@ -5,13 +5,10 @@ import agentRoutes from "./routes/agent.js";
 import dotenv from "dotenv";
 import authRoutes from "./routes/loginroutes/auth.js";
 import superadminRoutes from "./routes/loginroutes/superadmin.js";
-import session from "express-session";
 import { loadCountries } from "./services/country.js";
 import metaroutes from "./routes/meta.js";
-import { pool } from "./db.js";
-import pgSession from "connect-pg-simple";
+
 import composeRoutes from "./routes/compose/compose.js";
-const PgSession = pgSession(session);
 dotenv.config();
 
 const app = express();
@@ -27,26 +24,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(
-  session({
-    name: "supportbot.sid", // 🔥 custom cookie name
-    store: new PgSession({
-      pool,
-      tableName: "user_sessions",
-      pruneSessionInterval: 60 * 15, // 🔥 cleanup
-    }),
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    rolling: true,
-    cookie: {
-      httpOnly: true,
-      secure: true,          // ✅ MUST be true on HTTPS (Render)
-      sameSite: "none",      // ✅ MUST be none for cross-origin
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    }
-  }),
-);
+
 app.get("/", (req, res) => {
   res.json({
     status: "ok",

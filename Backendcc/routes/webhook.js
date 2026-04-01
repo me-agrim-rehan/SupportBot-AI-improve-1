@@ -4,7 +4,7 @@ import { pool } from "../db.js";
 
 import { sendMessage } from "../services/whatsapp.js";
 import { processMessage } from "../services/ai.js";
-
+import { requireAuth } from "../middleware/auth.js";
 import {
   getMessagesByConversationId,
   addMessage,
@@ -177,8 +177,8 @@ router.post("/", async (req, res) => {
 /**
  * ✅ GET CONVERSATIONS (HIERARCHY VERSION)
  */
-router.get("/conversations", async (req, res) => {
-  const user = req.session.user;
+router.get("/conversations", requireAuth, async (req, res) => {
+  const user = req.user;
 
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
