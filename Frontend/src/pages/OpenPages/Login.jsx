@@ -19,7 +19,7 @@ export default function Login() {
         // ✅ Store user
         localStorage.setItem("user", JSON.stringify(res.user));
 
-        navigate("/chat");
+        navigate("/dashboard");
       } else {
         alert(res.error || "Login failed");
       }

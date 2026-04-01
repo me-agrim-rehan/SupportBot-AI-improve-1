@@ -39,10 +39,10 @@ router.post("/reply", requireAuth, async (req, res) => {
        WHERE c.sender_id = $1
        AND c.status = 'active'
        LIMIT 1`,
-      [to],
+      [ to ],
     );
 
-    const conversation = convoRes.rows[0];
+    const conversation = convoRes.rows[ 0 ];
 
     if (!conversation) {
       return res.status(404).json({
@@ -60,99 +60,101 @@ router.post("/reply", requireAuth, async (req, res) => {
     }
 
     // =========================
-    // 👨‍💻 SUPPORT RULES
-    // =========================
-    if (user.role === "support") {
-      // dept + country restriction
-      if (
-        user.department_id !== conversation.department_id ||
-        user.country_id !== conversation.country_id
-      ) {
-        return res.status(403).json({
-          error: "Unauthorized for this chat",
-        });
-      }
-
-      // cannot override admin/superadmin
-      if (
-        conversation.assigned_role === "admin" ||
-        conversation.assigned_role === "superadmin"
-      ) {
-        return res.status(403).json({
-          error: `Chat handled by ${conversation.assigned_role}`,
-        });
-      }
-
-      // assign if unassigned
-      if (!conversation.assigned_to) {
-        await pool.query(
-          `UPDATE conversations
-           SET assigned_to = $1,
-               assigned_role = $2
-           WHERE id = $3 AND assigned_to IS NULL`,
-          [user.id, user.role, conversation.id],
-        );
-      }
-
-      // takeover after 20 min
-      if (conversation.assigned_to && conversation.assigned_to !== user.id) {
-        const result = await pool.query(
-          `UPDATE conversations
-           SET assigned_to = $1,
-               assigned_role = $2
-           WHERE id = $3
-           AND last_agent_reply_at < NOW() - INTERVAL '20 minutes'
-           RETURNING id`,
-          [user.id, user.role, conversation.id],
-        );
-
-        if (result.rowCount === 0) {
-          return res.status(403).json({
-            error: "Another support agent is active",
-          });
-        }
-      }
-    }
-
-    // =========================
-    // 🧑‍💼 ADMIN RULES
-    // =========================
-    if (user.role === "admin") {
-      if (user.department_id !== conversation.department_id) {
-        return res.status(403).json({
-          error: "Wrong department",
-        });
-      }
-
-      // cannot override superadmin
-      if (conversation.assigned_role === "superadmin") {
-        return res.status(403).json({
-          error: "Handled by superadmin",
-        });
-      }
-
-      // force takeover
-      await pool.query(
-        `UPDATE conversations
-         SET assigned_to = $1,
-             assigned_role = $2
-         WHERE id = $3`,
-        [user.id, user.role, conversation.id],
-      );
-    }
-
-    // =========================
-    // 👑 SUPERADMIN RULES
+    // 👑 SUPERADMIN (BYPASS ALL)
     // =========================
     if (user.role === "superadmin") {
-      // always takeover
       await pool.query(
         `UPDATE conversations
+     SET assigned_to = $1,
+         assigned_role = $2
+     WHERE id = $3`,
+        [ user.id, user.role, conversation.id ],
+      );
+    } else {
+      // =========================
+      // 🔒 DEPARTMENT REQUIRED (NOT for superadmin)
+      // =========================
+      if (!conversation.department_id) {
+        return res.status(403).json({
+          error: "Department not assigned yet",
+        });
+      }
+
+      // =========================
+      // 👨‍💻 SUPPORT RULES
+      // =========================
+      if (user.role === "support") {
+        if (
+          user.department_id !== conversation.department_id ||
+          user.country_id !== conversation.country_id
+        ) {
+          return res.status(403).json({
+            error: "Unauthorized for this chat",
+          });
+        }
+
+        if (
+          conversation.assigned_role === "admin" ||
+          conversation.assigned_role === "superadmin"
+        ) {
+          return res.status(403).json({
+            error: `Chat handled by ${conversation.assigned_role}`,
+          });
+        }
+
+        if (!conversation.assigned_to) {
+          await pool.query(
+            `UPDATE conversations
          SET assigned_to = $1,
              assigned_role = $2
-         WHERE id = $3`,
-        [user.id, user.role, conversation.id],
-      );
+         WHERE id = $3 AND assigned_to IS NULL`,
+            [ user.id, user.role, conversation.id ],
+          );
+        }
+
+        if (conversation.assigned_to && conversation.assigned_to !== user.id) {
+          const result = await pool.query(
+            `UPDATE conversations
+         SET assigned_to = $1,
+             assigned_role = $2
+         WHERE id = $3
+         AND last_agent_reply_at < NOW() - INTERVAL '20 minutes'
+         RETURNING id`,
+            [ user.id, user.role, conversation.id ],
+          );
+
+          if (result.rowCount === 0) {
+            return res.status(403).json({
+              error: "Another support agent is active",
+            });
+          }
+        }
+      }
+
+      // =========================
+      // 🧑‍💼 ADMIN RULES
+      // =========================
+      if (user.role === "admin") {
+        if (user.department_id !== conversation.department_id) {
+          return res.status(403).json({
+            error: "Wrong department",
+          });
+        }
+
+        if (conversation.assigned_role === "superadmin") {
+          return res.status(403).json({
+            error: "Handled by superadmin",
+          });
+        }
+
+        await pool.query(
+          `UPDATE conversations
+       SET assigned_to = $1,
+           assigned_role = $2
+       WHERE id = $3`,
+          [ user.id, user.role, conversation.id ],
+        );
+      }
     }
 
     // =========================
@@ -172,7 +174,7 @@ router.post("/reply", requireAuth, async (req, res) => {
        SET last_agent_reply_at = NOW(),
            last_agent_id = $1
        WHERE id = $2`,
-      [user.id, conversation.id],
+      [ user.id, conversation.id ],
     );
 
     return res.json({
@@ -213,10 +215,10 @@ router.post("/reopen", requireAuth, async (req, res) => {
     // =========================
     const convRes = await pool.query(
       `SELECT * FROM conversations WHERE id = $1`,
-      [conversation_id],
+      [ conversation_id ],
     );
 
-    const convo = convRes.rows[0];
+    const convo = convRes.rows[ 0 ];
 
     if (!convo) {
       return res.status(404).json({ error: "Not found" });
@@ -237,7 +239,7 @@ router.post("/reopen", requireAuth, async (req, res) => {
        WHERE sender_id = $1
        AND status = 'active'
        LIMIT 1`,
-      [convo.sender_id],
+      [ convo.sender_id ],
     );
 
     if (active.rows.length > 0) {
@@ -292,7 +294,7 @@ router.post("/reopen", requireAuth, async (req, res) => {
        WHERE id = $1
        AND status = 'ended'
        RETURNING id`,
-      [conversation_id],
+      [ conversation_id ],
     );
 
     if (result.rowCount === 0) {
@@ -337,10 +339,10 @@ router.post("/assign", requireAuth, async (req, res) => {
        FROM conversations c
        LEFT JOIN users u ON c.assigned_to = u.id
        WHERE c.id = $1`,
-      [conversation_id],
+      [ conversation_id ],
     );
 
-    const c = convo.rows[0];
+    const c = convo.rows[ 0 ];
 
     if (!c) {
       return res.status(404).json({ error: "Conversation not found" });
@@ -381,7 +383,7 @@ router.post("/assign", requireAuth, async (req, res) => {
                assigned_role = $2
            WHERE id = $3 AND assigned_to IS NULL
            RETURNING id, assigned_to, assigned_role`,
-          [user.id, user.role, conversation_id],
+          [ user.id, user.role, conversation_id ],
         );
 
         if (result.rowCount === 0) {
@@ -392,7 +394,7 @@ router.post("/assign", requireAuth, async (req, res) => {
 
         return res.json({
           success: true,
-          conversation: result.rows[0],
+          conversation: result.rows[ 0 ],
         });
       }
 
@@ -404,7 +406,7 @@ router.post("/assign", requireAuth, async (req, res) => {
          WHERE id = $3
          AND last_agent_reply_at < NOW() - INTERVAL '20 minutes'
          RETURNING id, assigned_to, assigned_role`,
-        [user.id, user.role, conversation_id],
+        [ user.id, user.role, conversation_id ],
       );
 
       if (result.rowCount === 0) {
@@ -415,7 +417,7 @@ router.post("/assign", requireAuth, async (req, res) => {
 
       return res.json({
         success: true,
-        conversation: result.rows[0],
+        conversation: result.rows[ 0 ],
       });
     }
 
@@ -444,12 +446,12 @@ router.post("/assign", requireAuth, async (req, res) => {
                assigned_role = $2
            WHERE id = $3
            RETURNING id, assigned_to, assigned_role`,
-          [user.id, user.role, conversation_id],
+          [ user.id, user.role, conversation_id ],
         );
 
         return res.json({
           success: true,
-          conversation: result.rows[0],
+          conversation: result.rows[ 0 ],
         });
       }
 
@@ -467,12 +469,12 @@ router.post("/assign", requireAuth, async (req, res) => {
                assigned_role = $2
            WHERE id = $3
            RETURNING id, assigned_to, assigned_role`,
-          [user.id, user.role, conversation_id],
+          [ user.id, user.role, conversation_id ],
         );
 
         return res.json({
           success: true,
-          conversation: result.rows[0],
+          conversation: result.rows[ 0 ],
         });
       }
 
@@ -517,10 +519,10 @@ router.post("/end", requireAuth, async (req, res) => {
     // =========================
     const convo = await pool.query(
       `SELECT * FROM conversations WHERE id = $1`,
-      [conversation_id],
+      [ conversation_id ],
     );
 
-    const c = convo.rows[0];
+    const c = convo.rows[ 0 ];
 
     if (!c) {
       return res.status(404).json({ error: "Not found" });
@@ -574,7 +576,7 @@ router.post("/end", requireAuth, async (req, res) => {
        WHERE id = $1
        AND status = 'active'
        RETURNING id`,
-      [conversation_id, user.id],
+      [ conversation_id, user.id ],
     );
 
     if (result.rowCount === 0) {
