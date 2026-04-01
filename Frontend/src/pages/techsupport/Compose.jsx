@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as XLSX from "xlsx";
 import styles from "./styles/Compose.module.css";
 import API from "../../API/api";
 
@@ -12,15 +13,59 @@ function Compose() {
     return value.replace(/[^\d\n, ]/g, "");
   };
 
+  // 🔥 normalize numbers (remove +, spaces, etc.)
+  const normalizeNumber = (num) => {
+    return num.replace(/\D/g, ""); // keep only digits
+  };
+
   // 🔥 format numbers list
   const formatNumbers = () => {
     return numbers
       .split(/[\n, ]+/)
-      .map((n) => n.replace(/\D/g, ""))
+      .map(normalizeNumber)
       .filter(Boolean);
   };
 
   const numberList = formatNumbers();
+
+  // 📁 HANDLE FILE UPLOAD
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = (evt) => {
+      const data = new Uint8Array(evt.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+
+      const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      // 🔥 Extract all cells as numbers
+      const extracted = [];
+
+      json.forEach((row) => {
+        row.forEach((cell) => {
+          if (!cell) return;
+
+          const num = normalizeNumber(String(cell));
+
+          // simple validation (10+ digits)
+          if (num.length >= 10) {
+            extracted.push(num);
+          }
+        });
+      });
+
+      // merge into textarea
+      setNumbers((prev) => prev + "\n" + extracted.join("\n"));
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
 
   const handleSend = async () => {
     if (!numberList.length || !message) {
@@ -50,6 +95,16 @@ function Compose() {
       {/* SIDEBAR */}
       <div className={styles.sidebar}>
         <h2>Recipients</h2>
+
+        {/* 📁 FILE UPLOAD */}
+        <div className={styles.section}>
+          <label>Upload CSV / Excel</label>
+          <input
+            type="file"
+            accept=".csv, .xlsx, .xls"
+            onChange={handleFileUpload}
+          />
+        </div>
 
         <div className={styles.section}>
           <label>Numbers (with country code)</label>
