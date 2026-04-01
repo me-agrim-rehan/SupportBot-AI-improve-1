@@ -7,8 +7,7 @@ export const loginUser = async (data) => {
 
 /* 👤 CURRENT USER */
 export const getCurrentUser = async () => {
-  const res = await API.get("/auth/me");
-  return res.data;
+  return await API.get("/auth/me");
 };
 
 /* 🚪 LOGOUT */

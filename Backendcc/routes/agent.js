@@ -3,13 +3,13 @@ import express from "express";
 import { sendMessage } from "../services/whatsapp.js";
 import { addMessage } from "../store/conversations.js";
 import { pool } from "../db.js";
-
+import { requireAuth } from "../middleware/auth.js";
 const router = express.Router();
 
 /**
  * 📤 REPLY TO USER
  */
-router.post("/reply", async (req, res) => {
+router.post("/reply", requireAuth, async (req, res) => {
   const { to, message } = req.body;
 
   // =========================
@@ -23,7 +23,7 @@ router.post("/reply", async (req, res) => {
     return res.status(400).json({ error: "Message required" });
   }
 
-  const user = req.session.user;
+  const user = req.user;
   if (!user) {
     return res.status(401).json({ error: "Unauthorized" });
   }
@@ -190,8 +190,8 @@ router.post("/reply", async (req, res) => {
 /**
  * 🔁 REOPEN CHAT
  */
-router.post("/reopen", async (req, res) => {
-  const user = req.session.user;
+router.post("/reopen", requireAuth, async (req, res) => {
+  const user = req.user;
   const { conversation_id } = req.body;
 
   // =========================
@@ -313,8 +313,8 @@ router.post("/reopen", async (req, res) => {
 /**
  * 🟢 ASSIGN CHAT
  */
-router.post("/assign", async (req, res) => {
-  const user = req.session.user;
+router.post("/assign", requireAuth, async (req, res) => {
+  const user = req.user;
   const { conversation_id } = req.body;
 
   // =========================
@@ -494,8 +494,8 @@ router.post("/assign", async (req, res) => {
 /**
  * 🔚 END CHAT
  */
-router.post("/end", async (req, res) => {
-  const user = req.session.user;
+router.post("/end", requireAuth, async (req, res) => {
+  const user = req.user;
   const { conversation_id } = req.body;
 
   // =========================

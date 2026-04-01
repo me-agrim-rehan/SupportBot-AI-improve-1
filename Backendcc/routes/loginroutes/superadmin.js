@@ -91,7 +91,7 @@ router.post("/create-admin", requireSuperadmin, async (req, res) => {
 // ➕ Create support (UPDATED)
 
 router.post("/create-support", requireAdmin, async (req, res) => {
-  const creator = req.session.user;
+  const user = req.user;
 
   const { name, email, password, country_id, department_id } = req.body;
 

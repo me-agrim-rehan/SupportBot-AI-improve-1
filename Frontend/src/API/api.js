@@ -1,17 +1,19 @@
-// Frontend/src/API/api.js
-
 const BASE_URL = import.meta.env.VITE_BACKEND_URL;
+
 const fetchWrapper = async (endpoint, options = {}) => {
   const controller = new AbortController();
   const timeout = 10000;
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
-    const token = localStorage.getItem("token"); // ✅ MOVE HERE
+    const token = localStorage.getItem("token");
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
+      signal: controller.signal, // ✅ FIXED
+      cache: "no-store",         // 🔥 FIXES YOUR MAIN BUG
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache", // 🔥 extra safety
         ...(token && { Authorization: `Bearer ${token}` }),
         ...(options.headers || {}),
       },
@@ -19,6 +21,11 @@ const fetchWrapper = async (endpoint, options = {}) => {
     });
 
     clearTimeout(id);
+
+    // ✅ HANDLE 304 SAFELY (extra protection)
+    if (response.status === 304) {
+      return null;
+    }
 
     if (!response.ok) {
       throw new Error(`API error: ${response.status}`);

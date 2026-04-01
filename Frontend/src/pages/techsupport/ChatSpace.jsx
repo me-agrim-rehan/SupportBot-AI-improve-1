@@ -130,7 +130,7 @@ function ChatSpace() {
       openModal(
         `Take over chat from ${selectedChat.assigned_role}?`,
         async () => {
-          await assignChat(selectedChat.id);
+          await assignChat(selectedChat.id, true); // ✅ FIXED
         },
       );
       return;
@@ -158,7 +158,10 @@ function ChatSpace() {
     <div className={styles.container}>
       {/* Sidebar */}
       <div className={styles.sidebar}>
-        <h3 className={styles.sidebarTitle}>Conversations</h3>
+        <div className={styles.sidebarHeader}>
+          <img src="images/logo.png" className={styles.logo} />
+          <h3>Conversations</h3>
+        </div>
 
         {conversations.map((chat) => {
           const isOwnedByOther =

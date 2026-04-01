@@ -17,10 +17,11 @@ export const endSession = async (conversation_id) => {
 };
 
 export const assignChat = async (conversation_id, force = false) => {
-  return await API.post("/agent/assign", {
+  const res = await API.post("/agent/assign", {
     conversation_id,
     force,
   });
+  return res.data; // ✅ important
 };
 
 export const reopenChat = async (conversation_id) => {
