@@ -4,7 +4,6 @@ const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 const fetchWrapper = async (endpoint, options = {}) => {
   const controller = new AbortController();
   const timeout = 10000;
-
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
@@ -13,7 +12,7 @@ const fetchWrapper = async (endpoint, options = {}) => {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
         "Content-Type": "application/json",
-        Authorization: token ? `Bearer ${token}` : "",
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...(options.headers || {}),
       },
       ...options,

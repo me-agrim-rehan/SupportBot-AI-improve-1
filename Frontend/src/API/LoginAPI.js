@@ -2,8 +2,7 @@ import API from "./api";
 
 /* 🔐 LOGIN */
 export const loginUser = async (data) => {
-  const res = await API.post("/auth/login", data);
-  return res.data;
+  return await API.post("/auth/login", data);
 };
 
 /* 👤 CURRENT USER */

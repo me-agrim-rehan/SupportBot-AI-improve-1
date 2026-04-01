@@ -5,63 +5,45 @@ import API from "./api";
    SEND AGENT MESSAGE
 ======================== */
 export const sendReply = async (to, message, force = false) => {
-  const res = await API.post("/agent/reply", {
+  return await API.post("/agent/reply", {
     to,
     message,
-    force, // 🔥 ADD THIS
+    force,
   });
-
-  return res.data;
 };
-/* ========================
-   END CHAT
-======================== */
+
 export const endSession = async (conversation_id) => {
-  const res = await API.post("/agent/end", {
-    conversation_id,
-  });
-
-  return res.data;
+  return await API.post("/agent/end", { conversation_id });
 };
 
-/* ========================
-   ASSIGN CHAT
-======================== */
 export const assignChat = async (conversation_id, force = false) => {
-  const res = await API.post("/agent/assign", {
+  return await API.post("/agent/assign", {
     conversation_id,
-    force, // 🔥 added here
+    force,
   });
-
-  return res.data;
 };
 
+export const reopenChat = async (conversation_id) => {
+  return await API.post("/agent/reopen", { conversation_id });
+};
 /* ========================
    REOPEN CHAT
 ======================== */
-export const reopenChat = async (conversation_id) => {
-  const res = await API.post("/agent/reopen", {
-    conversation_id,
-  });
-
-  return res.data;
-};
-
 /* ========================
    FETCH CONVERSATIONS
 ======================== */
 export const fetchConversations = async () => {
-  const res = await API.get("/webhook/conversations");
-  return res.data;
+  return await API.get("/webhook/conversations"); // ✅ no .data
 };
 
 /* ========================
    FETCH MESSAGES
 ======================== */
 export const fetchMessages = async (conversation_id) => {
-  const res = await API.get(
-    `/webhook/conversations/${conversation_id}/messages`,
-  );
-
-  return res.data;
+  return await API.get(
+    `/webhook/conversations/${conversation_id}/messages`
+  ); // ✅ no .data
 };
+/* ========================
+   FETCH MESSAGES
+======================== */

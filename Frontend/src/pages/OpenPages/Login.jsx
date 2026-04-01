@@ -8,16 +8,22 @@ export default function Login() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    const res = await loginUser({ email, password });
+    try {
+      const res = await loginUser({ email, password });
 
-    if (res.success) {
-      // ✅ store user
-      localStorage.setItem("user", JSON.stringify(res.user));
+      if (res.success) {
+        // 🔥 MUST HAVE THIS
+        localStorage.setItem("token", res.token);
 
-      // ✅ redirect
-      navigate("/chat");
-    } else {
-      alert(res.error || "Login failed");
+        localStorage.setItem("user", JSON.stringify(res.user));
+
+        navigate("/chat");
+      } else {
+        alert(res.error || "Login failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Login failed");
     }
   };
 
