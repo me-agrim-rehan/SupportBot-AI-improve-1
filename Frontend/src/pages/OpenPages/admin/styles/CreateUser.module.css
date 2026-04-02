@@ -1,56 +1,110 @@
-.container {
-  max-width: 420px;
-  margin: 50px auto;
-  padding: 30px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  font-family: sans-serif;
+/* Frontend/src/pages/OpenPages/admin/styles/CreateUser.module.css */
+
+.page {
+  min-height: 100vh;
+  background: url("/images/oil-bg.jpg") no-repeat center/cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
 }
 
-h2 {
-  margin-bottom: 20px;
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  border-radius: 16px;
+  padding: 30px 25px;
+  color: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.header {
   text-align: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  width: 60px;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 13px;
+  opacity: 0.7;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputGroup label {
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 input,
 select {
   padding: 10px 12px;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: none;
+  outline: none;
   font-size: 14px;
-  transition: 0.2s;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 input:focus,
 select:focus {
-  border-color: #4f46e5;
-  outline: none;
+  outline: 2px solid #4f9cff;
 }
 
 .button {
   margin-top: 10px;
   padding: 12px;
+  border-radius: 10px;
   border: none;
-  border-radius: 8px;
-  background: #4f46e5;
+  background: linear-gradient(135deg, #4f9cff, #6c5ce7);
   color: white;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.2s;
+  transition: 0.2s ease;
 }
 
 .button:hover {
-  background: #4338ca;
+  transform: translateY(-1px);
+  opacity: 0.95;
 }
 
 .button:disabled {
-  background: #aaa;
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* 📱 Mobile */
+@media (max-width: 480px) {
+  .card {
+    padding: 20px;
+  }
+
+  .logo {
+    width: 50px;
+  }
 }

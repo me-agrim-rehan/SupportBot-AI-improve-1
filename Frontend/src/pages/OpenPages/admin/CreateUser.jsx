@@ -5,7 +5,7 @@ import {
   createSupport,
   getCurrentUser,
 } from "../../../API/LoginAPI";
-import API from "../../../API/api"; // ✅ use axios instance
+import API from "../../../API/api";
 import styles from "./styles/CreateUser.module.css";
 
 export default function CreateUser() {
@@ -23,7 +23,6 @@ export default function CreateUser() {
   const [roleToCreate, setRoleToCreate] = useState("support");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 current user
   useEffect(() => {
     getCurrentUser().then((data) => {
       setCurrentUser(data);
@@ -38,7 +37,6 @@ export default function CreateUser() {
     });
   }, []);
 
-  // 🔥 fetch dropdowns (FIXED → axios)
   useEffect(() => {
     const fetchMeta = async () => {
       try {
@@ -61,7 +59,6 @@ export default function CreateUser() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  // ✅ improved validation
   const isValid =
     form.name &&
     form.email &&
@@ -89,7 +86,7 @@ export default function CreateUser() {
           password: "",
           department_id:
             currentUser?.role === "admin"
-              ? currentUser.department_id // ✅ keep admin dept
+              ? currentUser.department_id
               : "",
           country_id: "",
         });
@@ -104,76 +101,114 @@ export default function CreateUser() {
   };
 
   return (
-    <div className={styles.container}>
-      <h2>Create User</h2>
+    <div className={styles.page}>
+      {/* Background */}
+      <div className={styles.overlay} />
 
-      <div className={styles.form}>
-        <input
-          value={form.name}
-          placeholder="Name"
-          onChange={(e) => handleChange("name", e.target.value)}
-        />
+      {/* Card */}
+      <div className={styles.card}>
+        {/* Header */}
+        <div className={styles.header}>
+          <img
+            src="/images/header-logo.png"
+            alt="logo"
+            className={styles.logo}
+          />
+          <h2>Create User</h2>
+          <p className={styles.subtitle}>
+            Add new admin or support member
+          </p>
+        </div>
 
-        <input
-          value={form.email}
-          placeholder="Email"
-          onChange={(e) => handleChange("email", e.target.value)}
-        />
+        {/* Form */}
+        <div className={styles.form}>
+          <div className={styles.inputGroup}>
+            <label>Name</label>
+            <input
+              value={form.name}
+              placeholder="Enter full name"
+              onChange={(e) => handleChange("name", e.target.value)}
+            />
+          </div>
 
-        <input
-          value={form.password}
-          placeholder="Password"
-          type="password"
-          onChange={(e) => handleChange("password", e.target.value)}
-        />
+          <div className={styles.inputGroup}>
+            <label>Email</label>
+            <input
+              value={form.email}
+              placeholder="Enter email"
+              onChange={(e) => handleChange("email", e.target.value)}
+            />
+          </div>
 
-        {/* SUPERADMIN ONLY */}
-        {currentUser?.role === "superadmin" && (
-          <>
+          <div className={styles.inputGroup}>
+            <label>Password</label>
+            <input
+              value={form.password}
+              placeholder="Enter password"
+              type="password"
+              onChange={(e) => handleChange("password", e.target.value)}
+            />
+          </div>
+
+          {/* SUPERADMIN ONLY */}
+          {currentUser?.role === "superadmin" && (
+            <>
+              <div className={styles.inputGroup}>
+                <label>Role</label>
+                <select
+                  value={roleToCreate}
+                  onChange={(e) => setRoleToCreate(e.target.value)}
+                >
+                  <option value="support">Support</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+
+              <div className={styles.inputGroup}>
+                <label>Department</label>
+                <select
+                  value={form.department_id}
+                  onChange={(e) =>
+                    handleChange("department_id", Number(e.target.value))
+                  }
+                >
+                  <option value="">Select Department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* COUNTRY */}
+          <div className={styles.inputGroup}>
+            <label>Country</label>
             <select
-              value={roleToCreate}
-              onChange={(e) => setRoleToCreate(e.target.value)}
-            >
-              <option value="support">Support</option>
-              <option value="admin">Admin</option>
-            </select>
-
-            <select
-              value={form.department_id}
+              value={form.country_id}
               onChange={(e) =>
-                handleChange("department_id", Number(e.target.value))
+                handleChange("country_id", Number(e.target.value))
               }
             >
-              <option value="">Select Department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
+              <option value="">Select Country</option>
+              {countries.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
-          </>
-        )}
+          </div>
 
-        {/* COUNTRY */}
-        <select
-          value={form.country_id}
-          onChange={(e) => handleChange("country_id", Number(e.target.value))}
-        >
-          <option value="">Select Country</option>
-          {countries.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-
-        <button
-          className={styles.button}
-          disabled={!isValid || loading}
-          onClick={handleSubmit}
-        >
-          {loading ? "Creating..." : "Create User"}
-        </button>
+          <button
+            className={styles.button}
+            disabled={!isValid || loading}
+            onClick={handleSubmit}
+          >
+            {loading ? "Creating..." : "Create User"}
+          </button>
+        </div>
       </div>
     </div>
   );
