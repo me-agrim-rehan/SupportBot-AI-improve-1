@@ -1,14 +1,15 @@
 // Frontend/src/API/api.js
-
 const BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
 const fetchWrapper = async (endpoint, options = {}) => {
   const controller = new AbortController();
-  const timeout = 10000;
+  const timeout = 20000;
 
   const id = setTimeout(() => controller.abort(), timeout);
 
   try {
+    console.log("🌐 API Request:", endpoint, options);
+
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       credentials: "include",
       signal: controller.signal,
@@ -18,6 +19,8 @@ const fetchWrapper = async (endpoint, options = {}) => {
     clearTimeout(id);
 
     const data = await response.json().catch(() => ({}));
+
+    console.log("🌐 API Response:", data);
 
     if (!response.ok) {
       throw {
@@ -39,21 +42,24 @@ const fetchWrapper = async (endpoint, options = {}) => {
     throw err;
   }
 };
+
 const API = {
   get: (url, config = {}) => fetchWrapper(url, { method: "GET", ...config }),
 
   post: (url, data, config = {}) => {
     const isFormData = data instanceof FormData;
 
+    const headers = isFormData
+      ? { ...(config.headers || {}) }
+      : {
+          "Content-Type": "application/json",
+          ...(config.headers || {}),
+        };
+
     return fetchWrapper(url, {
       method: "POST",
       body: isFormData ? data : JSON.stringify(data),
-      headers: isFormData
-        ? config.headers || {} // 🚫 NO content-type
-        : {
-            "Content-Type": "application/json",
-            ...(config.headers || {}),
-          },
+      headers,
       ...config,
     });
   },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
 import styles from "./styles/Compose.module.css";
 import API from "../../API/api";
@@ -66,17 +66,34 @@ function Compose() {
 
     reader.readAsArrayBuffer(file);
   };
+  const fileInputRef = useRef(null);
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Only image files allowed");
+      return;
+    }
+
+    setImage(file);
+  };
 
   const handleSend = async () => {
-    if (!numberList.length || (!message && !image)) {
+    if (!numberList.length || (!(message && message.trim()) && !image)) {
       return alert("Add numbers + message or image");
     }
 
     try {
       setLoading(true);
 
-      const formData = new FormData();
+      console.log("📤 Sending payload:", {
+        numbers: numberList,
+        message,
+        image,
+      });
 
+      const formData = new FormData();
       formData.append("to", JSON.stringify(numberList));
       formData.append("message", message);
 
@@ -84,13 +101,21 @@ function Compose() {
         formData.append("image", image);
       }
 
-      await API.post("/compose/send", formData, {});
+      const res = await API.post("/compose/send", formData);
 
-      alert(`Sent to ${numberList.length} users ✅`);
+      const sent = res.data.results.filter((r) => r.status === "sent").length;
+      const failed = res.data.results.filter(
+        (r) => r.status === "failed",
+      ).length;
+
+      alert(`✅ Sent: ${sent} | ❌ Failed: ${failed}`);
+
       setNumbers("");
       setMessage("");
-    } catch {
-      alert("Failed ❌");
+      setImage(null);
+    } catch (err) {
+      console.error(err);
+      alert(err?.response?.data?.error || "Failed ❌");
     } finally {
       setLoading(false);
     }
@@ -144,10 +169,16 @@ function Compose() {
             placeholder="Type your message..."
           />
           <input
+            ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
+            onChange={handleImageChange}
           />
+          {image && (
+            <div style={{ fontSize: "12px", marginTop: "5px" }}>
+              📎 {image.name}
+            </div>
+          )}
 
           <button onClick={handleSend} disabled={loading}>
             {loading ? "Sending..." : "Send"}

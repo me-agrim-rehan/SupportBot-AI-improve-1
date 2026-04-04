@@ -8,7 +8,6 @@ export async function sendMessage(to, message, imageId = null) {
     let body;
 
     if (imageId) {
-      // 📸 IMAGE MESSAGE
       body = {
         messaging_product: "whatsapp",
         to,
@@ -19,7 +18,6 @@ export async function sendMessage(to, message, imageId = null) {
         },
       };
     } else {
-      // 💬 TEXT MESSAGE
       body = {
         messaging_product: "whatsapp",
         to,
@@ -37,18 +35,24 @@ export async function sendMessage(to, message, imageId = null) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
-      }
+      },
     );
 
     const data = await response.json();
-    console.log("WhatsApp API response:", data);
 
-    return data?.messages?.[0]?.id || null;
+    console.log("📩 WhatsApp FULL response:", JSON.stringify(data, null, 2));
+
+    if (!response.ok || !data?.messages?.[0]?.id) {
+      throw new Error(data?.error?.message || "WhatsApp send failed");
+    }
+
+    return data.messages[0].id;
   } catch (err) {
     console.error("Send error:", err.message);
     return null;
   }
 }
+
 export async function uploadMedia(filePath) {
   const formData = new FormData();
 
@@ -63,9 +67,16 @@ export async function uploadMedia(filePath) {
         Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
       },
       body: formData,
-    }
+    },
   );
 
-  const data = await response.json();
-  return data.id; // 🔥 THIS IS IMPORTANT
+  const data = await response.json(); // ✅ FIRST get data
+
+  console.log("📤 Media upload response:", JSON.stringify(data, null, 2));
+
+  if (!data.id) {
+    throw new Error("Media upload failed");
+  }
+
+  return data.id;
 }
