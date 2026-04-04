@@ -60,10 +60,11 @@ export async function sendMessage(to, message, imageId = null) {
 export async function uploadMedia(filePath) {
   const formData = new FormData();
 
-  // 🔥 read file as buffer
   const fileBuffer = fs.readFileSync(filePath);
 
-  const blob = new Blob([fileBuffer]);
+  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+
+  const blob = new Blob([fileBuffer], { type: mimeType });
 
   formData.append("file", blob, path.basename(filePath));
   formData.append("messaging_product", "whatsapp");
@@ -87,12 +88,6 @@ export async function uploadMedia(filePath) {
     if (!response.ok) {
       throw new Error(data?.error?.message || "Media upload failed");
     }
-
-    if (!data.id) {
-      throw new Error("No media ID returned");
-    }
-
-    console.log("📸 Media ID:", data.id);
 
     return data.id;
   } catch (err) {
