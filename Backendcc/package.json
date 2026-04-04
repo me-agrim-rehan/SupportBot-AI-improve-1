@@ -8,6 +8,7 @@
     "express-session": "^1.19.0",
     "form-data": "^4.0.5",
     "libphonenumber-js": "^1.12.40",
+    "mime-types": "^3.0.2",
     "multer": "^2.1.1",
     "nodemon": "^3.1.14",
     "openai": "^6.32.0",

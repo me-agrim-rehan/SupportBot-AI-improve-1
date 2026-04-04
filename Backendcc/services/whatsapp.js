@@ -1,7 +1,10 @@
 import dotenv from "dotenv";
 import FormData from "form-data";
 import fs from "fs";
+import mime from "mime-types";
+import path from "path";
 dotenv.config();
+
 
 export async function sendMessage(to, message, imageId = null) {
   try {
@@ -56,7 +59,13 @@ export async function sendMessage(to, message, imageId = null) {
 export async function uploadMedia(filePath) {
   const formData = new FormData();
 
-  formData.append("file", fs.createReadStream(filePath));
+  const mimeType = mime.lookup(filePath) || "image/jpeg";
+
+  formData.append("file", fs.createReadStream(filePath), {
+    filename: path.basename(filePath), // ✅ FIXED
+    contentType: mimeType,
+  });
+
   formData.append("messaging_product", "whatsapp");
 
   try {
@@ -66,10 +75,10 @@ export async function uploadMedia(filePath) {
         method: "POST",
         headers: {
           Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-          ...formData.getHeaders(), // 🔥 THIS FIXES YOUR ERROR
+          ...formData.getHeaders(),
         },
         body: formData,
-      },
+      }
     );
 
     const text = await response.text();
