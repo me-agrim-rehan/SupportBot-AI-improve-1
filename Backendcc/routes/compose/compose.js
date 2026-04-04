@@ -14,8 +14,17 @@ router.post("/send", requireAdmin, upload.single("image"), async (req, res) => {
   let { to, message } = req.body;
   let imageId = null;
 
+  console.log({
+    to,
+    message,
+    file: req.file,
+  });
   if (typeof to === "string") {
-    to = JSON.parse(to);
+    try {
+      to = JSON.parse(to);
+    } catch {
+      to = [to];
+    }
   }
   // 📸 if image uploaded → upload to WhatsApp
   if (req.file) {
@@ -28,7 +37,7 @@ router.post("/send", requireAdmin, upload.single("image"), async (req, res) => {
       fs.unlinkSync(req.file.path);
     }
   }
-  if (!to || (!message && !req.file)) {
+  if (!to || (!(message && message.trim()) && !req.file)) {
     return res.status(400).json({ error: "message or image required" });
   }
 

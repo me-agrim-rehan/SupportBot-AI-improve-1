@@ -68,8 +68,8 @@ function Compose() {
   };
 
   const handleSend = async () => {
-    if (!numberList.length || !message) {
-      return alert("Add numbers + message");
+    if (!numberList.length || (!message && !image)) {
+      return alert("Add numbers + message or image");
     }
 
     try {
@@ -84,8 +84,7 @@ function Compose() {
         formData.append("image", image);
       }
 
-      await API.post("/compose/send", formData, {
-      });
+      await API.post("/compose/send", formData, {});
 
       alert(`Sent to ${numberList.length} users ✅`);
       setNumbers("");
