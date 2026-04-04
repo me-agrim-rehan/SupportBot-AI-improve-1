@@ -59,24 +59,41 @@ export async function uploadMedia(filePath) {
   formData.append("file", fs.createReadStream(filePath));
   formData.append("messaging_product", "whatsapp");
 
-  const response = await fetch(
-    `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+        },
+        body: formData,
       },
-      body: formData,
-    },
-  );
+    );
 
-  const data = await response.json();
+    const text = await response.text(); // 🔥 IMPORTANT
+    console.log("📤 RAW MEDIA RESPONSE:", text);
 
-  console.log("📤 Media upload response:", JSON.stringify(data, null, 2));
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid JSON from WhatsApp");
+    }
 
-  if (!response.ok || !data.id) {
-    throw new Error(data?.error?.message || "Media upload failed");
+    if (!response.ok) {
+      throw new Error(data?.error?.message || "Media upload failed");
+    }
+
+    if (!data.id) {
+      throw new Error("No media ID returned");
+    }
+
+    console.log("📸 Media ID:", data.id);
+
+    return data.id;
+  } catch (err) {
+    console.error("❌ uploadMedia error:", err.message);
+    throw err;
   }
-
-  return data.id;
 }

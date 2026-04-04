@@ -53,7 +53,7 @@ router.post("/send", requireAdmin, upload.single("image"), async (req, res) => {
       console.log("📸 Image uploaded. ID:", imageId);
     } catch (err) {
       console.error("❌ Media upload failed:", err.message);
-      return res.status(500).json({ error: "Image upload failed" });
+      return res.status(500).json({ error: err.message });
     } finally {
       fs.unlinkSync(req.file.path);
     }
