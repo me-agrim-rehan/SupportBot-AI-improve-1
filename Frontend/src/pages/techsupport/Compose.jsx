@@ -7,7 +7,7 @@ function Compose() {
   const [numbers, setNumbers] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [image, setImage] = useState(null);
   // 🔒 allow only digits, comma, space, newline
   const cleanNumbers = (value) => {
     return value.replace(/[^\d\n, ]/g, "");
@@ -75,9 +75,16 @@ function Compose() {
     try {
       setLoading(true);
 
-      await API.post("/compose/send", {
-        to: numberList,
-        message,
+      const formData = new FormData();
+
+      formData.append("to", JSON.stringify(numberList));
+      formData.append("message", message);
+
+      if (image) {
+        formData.append("image", image);
+      }
+
+      await API.post("/compose/send", formData, {
       });
 
       alert(`Sent to ${numberList.length} users ✅`);
@@ -136,6 +143,11 @@ function Compose() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message..."
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setImage(e.target.files[0])}
           />
 
           <button onClick={handleSend} disabled={loading}>
