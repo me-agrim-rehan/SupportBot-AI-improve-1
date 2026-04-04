@@ -48,8 +48,8 @@ export async function sendMessage(to, message, imageId = null) {
 
     return data.messages[0].id;
   } catch (err) {
-    console.error("Send error:", err.message);
-    return null;
+    console.error("❌ Media upload failed:", err.message);
+    return res.status(500).json({ error: err.message });
   }
 }
 
@@ -70,12 +70,12 @@ export async function uploadMedia(filePath) {
     },
   );
 
-  const data = await response.json(); // ✅ FIRST get data
+  const data = await response.json();
 
   console.log("📤 Media upload response:", JSON.stringify(data, null, 2));
 
-  if (!data.id) {
-    throw new Error("Media upload failed");
+  if (!response.ok || !data.id) {
+    throw new Error(data?.error?.message || "Media upload failed");
   }
 
   return data.id;
