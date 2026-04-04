@@ -10,11 +10,7 @@ const fetchWrapper = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
-      credentials: "include", // 🔥 same as withCredentials
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      },
+      credentials: "include",
       signal: controller.signal,
       ...options,
     });
@@ -24,7 +20,6 @@ const fetchWrapper = async (endpoint, options = {}) => {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      // mimic axios error
       throw {
         response: {
           status: response.status,
@@ -33,7 +28,6 @@ const fetchWrapper = async (endpoint, options = {}) => {
       };
     }
 
-    // mimic axios response
     return {
       data,
       status: response.status,
@@ -45,16 +39,24 @@ const fetchWrapper = async (endpoint, options = {}) => {
     throw err;
   }
 };
-
 const API = {
   get: (url, config = {}) => fetchWrapper(url, { method: "GET", ...config }),
 
-  post: (url, data, config = {}) =>
-    fetchWrapper(url, {
+  post: (url, data, config = {}) => {
+    const isFormData = data instanceof FormData;
+
+    return fetchWrapper(url, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: isFormData ? data : JSON.stringify(data),
+      headers: isFormData
+        ? config.headers || {} // 🚫 NO content-type
+        : {
+            "Content-Type": "application/json",
+            ...(config.headers || {}),
+          },
       ...config,
-    }),
+    });
+  },
 
   put: (url, data, config = {}) =>
     fetchWrapper(url, {
