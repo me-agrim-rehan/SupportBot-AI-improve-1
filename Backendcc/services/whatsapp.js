@@ -6,7 +6,7 @@ import path from "path";
 
 dotenv.config();
 
-const { FormData, File } = undici;
+const { FormData } = undici;
 
 const WHATSAPP_BASE = "https://graph.facebook.com/v19.0";
 
@@ -138,12 +138,12 @@ export async function uploadMedia(filePath) {
 
     const formData = new FormData();
 
-    // ✅ Use File instead of Blob (Node-safe)
-    const file = new File([fs.readFileSync(filePath)], fileName, {
-      type: mimeType,
+    // ✅ FIXED (THIS LINE ONLY)
+    formData.append("file", fs.createReadStream(filePath), {
+      filename: fileName,
+      contentType: mimeType,
     });
 
-    formData.append("file", file);
     formData.append("messaging_product", "whatsapp");
 
     const response = await safeFetch(
@@ -155,6 +155,7 @@ export async function uploadMedia(filePath) {
         },
         body: formData,
       },
+      30000 // 30s timeout for uploads
     );
 
     const data = await response.json().catch(() => ({}));
