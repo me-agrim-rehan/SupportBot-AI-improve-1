@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import FormData from "form-data";
+import { FormData, Blob } from "undici";
 import fs from "fs";
 import mime from "mime-types";
 import path from "path";
@@ -27,7 +27,15 @@ async function safeFetch(url, options = {}, timeout = 15000) {
     throw err;
   }
 }
-
+async function retry(fn, retries = 2) {
+  try {
+    return await fn();
+  } catch (err) {
+    if (retries <= 0) throw err;
+    console.log("🔁 Retrying...", retries);
+    return retry(fn, retries - 1);
+  }
+}
 /**
  * 🔥 SEND MESSAGE (text / image / video / audio / document)
  */
@@ -81,16 +89,18 @@ export async function sendMessage(to, message, media = null) {
       };
     }
 
-    const response = await safeFetch(
-      `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-          "Content-Type": "application/json",
+    const response = await retry(() =>
+      safeFetch(
+        `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-      },
+      ),
     );
 
     const data = await response.json().catch(() => ({}));
@@ -136,25 +146,24 @@ export async function uploadMedia(filePath) {
 
     const formData = new FormData();
 
-    // ✅ FIXED (THIS LINE ONLY)
-    formData.append("file", fs.createReadStream(filePath), {
-      filename: fileName,
-      contentType: mimeType,
-    });
+    const fileBuffer = fs.readFileSync(filePath);
+    const blob = new Blob([fileBuffer], { type: mimeType });
 
+    formData.append("file", blob, fileName);
     formData.append("messaging_product", "whatsapp");
 
-    const response = await safeFetch(
-      `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
-          ...formData.getHeaders(), // ✅ VERY IMPORTANT
+    const response = await retry(() =>
+      safeFetch(
+        `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+          },
+          body: formData,
         },
-        body: formData,
-      },
-      30000,
+        30000,
+      ),
     );
 
     const data = await response.json().catch(() => ({}));

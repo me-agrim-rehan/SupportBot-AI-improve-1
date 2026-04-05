@@ -145,6 +145,7 @@ router.post(
           error: err.message,
         });
       }
+      await new Promise((r) => setTimeout(r, 100));
     }
 
     /**
