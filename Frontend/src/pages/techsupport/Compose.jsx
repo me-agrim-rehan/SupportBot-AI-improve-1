@@ -7,7 +7,7 @@ function Compose() {
   const [numbers, setNumbers] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [image, setImage] = useState(null);
+  const [file, setFile] = useState(null);
   // 🔒 allow only digits, comma, space, newline
   const cleanNumbers = (value) => {
     return value.replace(/[^\d\n, ]/g, "");
@@ -67,21 +67,22 @@ function Compose() {
     reader.readAsArrayBuffer(file);
   };
   const fileInputRef = useRef(null);
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleFileChange = (e) => {
+    const selected = e.target.files[0];
+    if (!selected) return;
 
-    if (!file.type.startsWith("image/")) {
-      alert("Only image files allowed");
+    // 🔥 optional size check (frontend safety)
+    if (selected.size > 100 * 1024 * 1024) {
+      alert("File too large (max 100MB)");
       return;
     }
 
-    setImage(file);
+    setFile(selected);
   };
 
   const handleSend = async () => {
-    if (!numberList.length || (!(message && message.trim()) && !image)) {
-      return alert("Add numbers + message or image");
+    if (!numberList.length || (!(message && message.trim()) && !file)) {
+      return alert("Add numbers + message or file");
     }
 
     try {
@@ -90,15 +91,15 @@ function Compose() {
       console.log("📤 Sending payload:", {
         numbers: numberList,
         message,
-        image,
+        file,
       });
 
       const formData = new FormData();
       formData.append("to", JSON.stringify(numberList));
       formData.append("message", message);
 
-      if (image) {
-        formData.append("image", image);
+      if (file) {
+        formData.append("file", file); // ✅ IMPORTANT (not image)
       }
 
       const res = await API.post("/compose/send", formData);
@@ -112,7 +113,7 @@ function Compose() {
 
       setNumbers("");
       setMessage("");
-      setImage(null);
+      setFile(null);
     } catch (err) {
       console.error(err);
       alert(err?.response?.data?.error || "Failed ❌");
@@ -168,15 +169,10 @@ function Compose() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type your message..."
           />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          {image && (
+          <input ref={fileInputRef} type="file" onChange={handleFileChange} />
+          {file && (
             <div style={{ fontSize: "12px", marginTop: "5px" }}>
-              📎 {image.name}
+              📎 {file.name} ({file.type || "unknown"})
             </div>
           )}
 

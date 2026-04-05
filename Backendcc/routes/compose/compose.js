@@ -1,121 +1,163 @@
 import express from "express";
 import multer from "multer";
 import fs from "fs";
+import path from "path";
+
 import { sendMessage, uploadMedia } from "../../services/whatsapp.js";
 import { addMessage } from "../../store/conversations.js";
 import { requireAdmin } from "../../middleware/auth.js";
-import path from "path";
+
 const router = express.Router();
+
+/**
+ * 🔥 MULTER CONFIG (safe + production ready)
+ */
 const storage = multer.diskStorage({
   destination: "uploads/",
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const safeName = Date.now() + "-" + file.originalname.replace(/\s+/g, "_");
+    cb(null, safeName);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB max
+  },
+});
+
+/**
+ * 🔥 HELPER: safe delete
+ */
+const safeUnlink = (filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (err) {
+    console.error("⚠️ File delete failed:", err.message);
+  }
+};
+
+/**
+ * 🔥 HELPER: normalize numbers
+ */
+const normalizeNumbers = (input) => {
+  if (!input) return [];
+
+  let numbers = [];
+
+  if (Array.isArray(input)) {
+    numbers = input;
+  } else {
+    try {
+      const parsed = JSON.parse(input);
+      numbers = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      numbers = input.split(/[\n, ]+/);
+    }
+  }
+
+  return numbers
+    .map((n) => String(n).replace(/\D/g, "")) // keep digits only
+    .filter((n) => n.length >= 10); // basic validation
+};
 
 /**
  * 🔥 SEND (single OR multiple numbers)
  */
-router.post("/send", upload.single("image"), async (req, res) => {
-  let { to, message } = req.body;
-  let imageId = null;
+router.post(
+  "/send",
+  requireAdmin, // ✅ secure route
+  upload.single("file"), // ✅ changed from "image"
+  async (req, res) => {
+    let { to, message } = req.body;
 
-  // 🔍 DEBUG INPUT
-  console.log("📥 Incoming request:");
-  console.log({
-    to,
-    message,
-    file: req.file,
-  });
+    console.log("📥 Incoming request:", {
+      to,
+      message,
+      file: req.file?.originalname,
+    });
 
-  // 🔁 SAFE PARSE
-  if (typeof to === "string") {
-    try {
-      to = JSON.parse(to);
-    } catch {
-      to = [to];
+    // ✅ normalize numbers
+    const numbers = normalizeNumbers(to);
+
+    if (!numbers.length) {
+      return res.status(400).json({ error: "No valid numbers provided" });
     }
-  }
 
-  // 🚫 VALIDATION (must have numbers + message or image)
-  if (!to || (!(message && message.trim()) && !req.file)) {
-    console.log("❌ Validation failed");
-    return res.status(400).json({ error: "message or image required" });
-  }
-
-  // 🚫 IMAGE TYPE VALIDATION
-  if (req.file && !req.file.mimetype.startsWith("image/")) {
-    console.log("❌ Invalid file type:", req.file.mimetype);
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: "Only image files allowed" });
-  }
-
-  // 📸 UPLOAD IMAGE TO WHATSAPP
-  if (req.file) {
-    try {
-      console.log("📤 Uploading media...");
-      imageId = await uploadMedia(req.file.path);
-      console.log("📸 Image uploaded. ID:", imageId);
-    } catch (err) {
-      console.error("❌ Media upload failed:", err.message);
-      return res.status(500).json({ error: err.message });
-    } finally {
-      fs.unlinkSync(req.file.path);
+    if (!message && !req.file) {
+      return res.status(400).json({ error: "Message or file is required" });
     }
-  }
 
-  // 📞 NORMALIZE NUMBERS
-  let numbers = [];
+    /**
+     * 🔥 UPLOAD MEDIA (ONCE ONLY)
+     */
+    let media = null;
 
-  if (Array.isArray(to)) {
-    numbers = to;
-  } else {
-    numbers = to
-      .split(/[\n, ]+/)
-      .map((n) => n.trim())
-      .filter(Boolean);
-  }
+    if (req.file) {
+      try {
+        const uploadRes = await uploadMedia(req.file.path);
 
-  console.log("📞 Final numbers:", numbers);
+        media = {
+          id: uploadRes.id,
+          mimeType: uploadRes.mimeType,
+          filename: uploadRes.filename,
+        };
+      } catch (err) {
+        safeUnlink(req.file.path);
+        return res.status(500).json({ error: err.message });
+      }
 
-  const results = [];
+      // cleanup after upload
+      safeUnlink(req.file.path);
+    }
 
-  try {
+    /**
+     * 🔥 SEND LOOP (with isolation)
+     */
+    const results = [];
+
     for (const number of numbers) {
       try {
         console.log(`📨 Sending to ${number}...`);
 
-        const messageId = await sendMessage(number, message, imageId);
+        const messageId = await sendMessage(number, message, media);
 
-        if (!messageId) {
-          throw new Error("WhatsApp send failed");
-        }
+        if (!messageId) throw new Error("Send failed");
 
-        await addMessage(number, "outgoing", message, messageId, "sent");
-
-        console.log(`✅ Sent to ${number}`);
+        await addMessage(
+          number,
+          "outgoing",
+          message || "[media]",
+          messageId,
+          "sent",
+        );
 
         results.push({ number, status: "sent" });
       } catch (err) {
         console.error(`❌ Failed for ${number}:`, err.message);
 
-        results.push({ number, status: "failed" });
+        results.push({
+          number,
+          status: "failed",
+          error: err.message,
+        });
       }
     }
 
-    console.log("📊 Final results:", results);
-
-    res.json({
+    /**
+     * 🔥 RESPONSE
+     */
+    return res.json({
       success: true,
       total: numbers.length,
+      sent: results.filter((r) => r.status === "sent").length,
+      failed: results.filter((r) => r.status === "failed").length,
       results,
     });
-  } catch (err) {
-    console.error("❌ Server error:", err);
-    res.status(500).json({ error: "Failed to send" });
-  }
-});
+  },
+);
 
 export default router;

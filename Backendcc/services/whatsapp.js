@@ -3,25 +3,78 @@ import undici from "undici";
 import fs from "fs";
 import mime from "mime-types";
 import path from "path";
+
 dotenv.config();
 
-const { FormData, fileFromPath } = undici;
+const { FormData, File } = undici;
 
-export async function sendMessage(to, message, imageId = null) {
+const WHATSAPP_BASE = "https://graph.facebook.com/v19.0";
+
+/**
+ * 🔥 Safe fetch with timeout
+ */
+async function safeFetch(url, options = {}, timeout = 15000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+
   try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return res;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
+/**
+ * 🔥 SEND MESSAGE (text / image / video / audio / document)
+ */
+export async function sendMessage(to, message, media = null) {
+  try {
+    if (!to) throw new Error("Recipient (to) is required");
+
     let body;
 
-    if (imageId) {
+    if (media) {
+      const { id, mimeType, filename } = media;
+
+      if (!id || !mimeType) {
+        throw new Error("Invalid media object");
+      }
+
+      let type = "document";
+
+      if (mimeType.startsWith("image/")) type = "image";
+      else if (mimeType.startsWith("video/")) type = "video";
+      else if (mimeType.startsWith("audio/")) type = "audio";
+
+      const mediaPayload = {
+        id,
+      };
+
+      // ✅ caption allowed only for image/video/document
+      if (type !== "audio" && message) {
+        mediaPayload.caption = message;
+      }
+
+      // ✅ documents should include filename
+      if (type === "document") {
+        mediaPayload.filename = filename || "file";
+      }
+
       body = {
         messaging_product: "whatsapp",
         to,
-        type: "image",
-        image: {
-          id: imageId,
-          caption: message || "",
-        },
+        type,
+        [type]: mediaPayload,
       };
     } else {
+      if (!message) throw new Error("Message text is required");
+
       body = {
         messaging_product: "whatsapp",
         to,
@@ -30,8 +83,8 @@ export async function sendMessage(to, message, imageId = null) {
       };
     }
 
-    const response = await fetch(
-      `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
+    const response = await safeFetch(
+      `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/messages`,
       {
         method: "POST",
         headers: {
@@ -42,58 +95,82 @@ export async function sendMessage(to, message, imageId = null) {
       },
     );
 
-    const data = await response.json();
-
-    console.log("📩 WhatsApp FULL response:", JSON.stringify(data, null, 2));
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data?.messages?.[0]?.id) {
+      console.error("❌ WhatsApp API Error:", data);
       throw new Error(data?.error?.message || "WhatsApp send failed");
     }
 
     return data.messages[0].id;
   } catch (err) {
-    console.error("❌ sendMessage error:", err.message);
-    return null; // ✅ correct behavior
+    console.error("❌ sendMessage error:", {
+      message: err.message,
+      to,
+    });
+    return null;
   }
 }
 
+/**
+ * 🔥 UPLOAD MEDIA (ANY FILE TYPE)
+ */
 export async function uploadMedia(filePath) {
-  const formData = new FormData();
+  try {
+    if (!fs.existsSync(filePath)) {
+      throw new Error("File not found");
+    }
 
-  const fileBuffer = fs.readFileSync(filePath);
+    const stats = fs.statSync(filePath);
 
-  const mimeType = mime.lookup(filePath);
+    // 🚫 100MB hard safety (WhatsApp doc limit)
+    if (stats.size > 100 * 1024 * 1024) {
+      throw new Error("File too large (max 100MB)");
+    }
 
-  if (!mimeType) {
-    throw new Error("❌ Could not detect MIME type");
-  }
+    const mimeType = mime.lookup(filePath) || "application/octet-stream";
 
-  console.log("📂 File:", filePath);
-  console.log("📦 MIME:", mimeType);
+    const fileName = path.basename(filePath);
 
-  const blob = new Blob([fileBuffer], { type: mimeType });
+    console.log("📂 Uploading:", fileName);
+    console.log("📦 MIME:", mimeType);
+    console.log("📏 Size:", stats.size);
 
-  formData.append("file", blob, path.basename(filePath));
-  formData.append("messaging_product", "whatsapp");
+    const formData = new FormData();
 
-  const response = await fetch(
-    `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+    // ✅ Use File instead of Blob (Node-safe)
+    const file = new File([fs.readFileSync(filePath)], fileName, {
+      type: mimeType,
+    });
+
+    formData.append("file", file);
+    formData.append("messaging_product", "whatsapp");
+
+    const response = await safeFetch(
+      `${WHATSAPP_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`,
+        },
+        body: formData,
       },
-      body: formData,
-    },
-  );
+    );
 
-  const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
-  console.log("📤 MEDIA RESPONSE:", data);
+    if (!response.ok || !data?.id) {
+      console.error("❌ MEDIA UPLOAD ERROR:", data);
+      throw new Error(data?.error?.message || "Media upload failed");
+    }
 
-  if (!response.ok) {
-    throw new Error(data?.error?.message);
+    return {
+      id: data.id,
+      mimeType,
+      filename: fileName,
+    };
+  } catch (err) {
+    console.error("❌ uploadMedia error:", err.message);
+    throw err;
   }
-
-  return data.id;
 }
