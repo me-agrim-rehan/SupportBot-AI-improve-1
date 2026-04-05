@@ -1,13 +1,13 @@
 import dotenv from "dotenv";
-import { FormData, Blob } from "undici";
 import fs from "fs";
 import mime from "mime-types";
 import path from "path";
+import undici from "undici";
 
 dotenv.config();
 
 const WHATSAPP_BASE = "https://graph.facebook.com/v19.0";
-
+const { FormData, Blob } = undici;
 /**
  * 🔥 Safe fetch with timeout
  */
