@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./styles/ChatSpace.module.css";
-import API from "../../API/api";
+
 import {
+  sendReply,
   endSession,
   fetchConversations,
   fetchMessages,
@@ -15,8 +16,7 @@ function ChatSpace() {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [currentTime, setCurrentTime] = useState(() => Date.now());
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef(null);
+
   const [modal, setModal] = useState(null);
 
   // ✅ NEW: mobile view toggle
@@ -106,28 +106,16 @@ function ChatSpace() {
 
   const closeModal = () => setModal(null);
 
-  const handleSendReply = async () => {
-    if ((!message || !message.trim()) && !file) return;
+  const handleSendReply = async (force = false) => {
+    if (!message.trim()) return;
 
     try {
-      const formData = new FormData();
-      formData.append("to", selectedChat.sender_id);
-      formData.append("message", message);
-
-      if (file) {
-        formData.append("file", file);
-      }
-
-      await API.post("/agent/reply", formData);
-
+      await sendReply(selectedChat.sender_id, message, force);
       setMessage("");
-      setFile(null);
 
       const data = await fetchMessages(selectedChat.id);
       setMessages(data);
     } catch (error) {
-      console.error(error);
-
       if (error?.takeover) {
         openModal(`Take over chat from ${error.assigned_role}?`, () =>
           handleSendReply(true),
@@ -283,7 +271,7 @@ function ChatSpace() {
                 <div
                   className={isAgent ? styles.agentMessage : styles.userMessage}
                 >
-                  {msg.text === "[media]" ? <div>📎 Media</div> : msg.text}
+                  {msg.text}
 
                   {isAgent && (
                     <span className={styles.status}>
@@ -341,31 +329,11 @@ function ChatSpace() {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             disabled={!chatState.canReply}
-            placeholder="Type a message..."
           />
-
-          {/* 📎 Hidden file input */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={(e) => setFile(e.target.files[0])}
-            style={{ display: "none" }}
-          />
-
-          {/* 📎 Attach button */}
-          <button
-            onClick={() => fileInputRef.current.click()}
-            disabled={!chatState.canReply}
-          >
-            📎
-          </button>
-
-          {/* 📄 File preview */}
-          {file && <span style={{ fontSize: "12px" }}>{file.name}</span>}
 
           <button
             className={styles.sendBtn}
-            onClick={handleSendReply}
+            onClick={() => handleSendReply()}
             disabled={!chatState.canReply}
           >
             Send
