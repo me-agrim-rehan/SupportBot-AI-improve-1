@@ -19,8 +19,6 @@ const fetchWrapper = async (endpoint, options = {}) => {
 
     const data = await response.json().catch(() => ({}));
 
-    console.log("🌐 API Response:", data);
-
     if (!response.ok) {
       throw {
         response: {
