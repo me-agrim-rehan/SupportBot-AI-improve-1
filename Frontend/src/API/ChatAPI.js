@@ -4,18 +4,12 @@ import API from "./api";
 /* ========================
    SEND AGENT MESSAGE
 ======================== */
-export const sendReply = async (data, force = false) => {
-  let res;
-
-  if (data instanceof FormData) {
-    // ✅ NO HEADERS
-    res = await API.post("/agent/reply", data);
-  } else {
-    res = await API.post("/agent/reply", {
-      ...data,
-      force,
-    });
-  }
+export const sendReply = async (to, message, force = false) => {
+  const res = await API.post("/agent/reply", {
+    to,
+    message,
+    force, // 🔥 ADD THIS
+  });
 
   return res.data;
 };
