@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./styles/ChatSpace.module.css";
-
+import API from "../../API/api";
 import {
   endSession,
   fetchConversations,
@@ -118,11 +118,7 @@ function ChatSpace() {
         formData.append("file", file);
       }
 
-      await fetch("/agent/reply", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      });
+      await API.post("/agent/reply", formData);
 
       setMessage("");
       setFile(null);
