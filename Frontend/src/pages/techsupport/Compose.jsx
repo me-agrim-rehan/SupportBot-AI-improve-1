@@ -7,7 +7,10 @@ function Compose() {
   const [numbers, setNumbers] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [showSidebar, setShowSidebar] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -28,7 +31,7 @@ function Compose() {
 
   const numberList = formatNumbers();
 
-  // 📁 CSV / Excel upload
+  // CSV upload
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -58,21 +61,22 @@ function Compose() {
     reader.readAsArrayBuffer(file);
   };
 
-  // 📎 MULTI FILE SELECT
+  // 🔥 FIXED MULTI FILE HANDLER
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
+    const selected = Array.from(e.target.files);
+    if (!selected.length) return;
 
-    if (selectedFiles.length > 5) {
-      return alert("Max 5 files allowed");
-    }
+    const combined = [...files, ...selected].slice(0, 5); // ✅ FIX (5)
 
-    for (const f of selectedFiles) {
-      if (f.size > 100 * 1024 * 1024) {
-        return alert(`File too large: ${f.name}`);
-      }
-    }
+    setFiles(combined);
 
-    setFiles(selectedFiles);
+    const newPreviews = combined.map((file) =>
+      file.type.startsWith("image/")
+        ? URL.createObjectURL(file)
+        : null,
+    );
+
+    setPreviews(newPreviews);
   };
 
   const handleSend = async () => {
@@ -90,22 +94,22 @@ function Compose() {
       formData.append("to", JSON.stringify(numberList));
       formData.append("message", message);
 
-      files.forEach((file) => {
-        formData.append("files", file);
+      // 🔥 FIXED KEY NAME
+      files.forEach((f) => {
+        formData.append("files", f); // ✅ MUST MATCH BACKEND
       });
 
       const res = await API.post("/compose/send", formData);
 
       const sent = res.data.results.filter((r) => r.status === "sent").length;
-      const failed = res.data.results.filter(
-        (r) => r.status === "failed",
-      ).length;
+      const failed = res.data.results.filter((r) => r.status === "failed").length;
 
       alert(`✅ Sent: ${sent} | ❌ Failed: ${failed}`);
 
       setNumbers("");
       setMessage("");
       setFiles([]);
+      setPreviews([]);
     } catch (err) {
       console.error(err);
       alert(err?.response?.data?.error || "Failed ❌");
@@ -116,17 +120,30 @@ function Compose() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.sidebar}>
+      {showSidebar && (
+        <div
+          className={styles.overlay}
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
+      <div
+        className={`${styles.sidebar} ${showSidebar ? styles.show : ""}`}
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2>Recipients</h2>
 
-        <div className={styles.section}>
-          <label>Upload CSV / Excel</label>
+        <label className={styles.uploadBox}>
+          <div className={styles.uploadIcon}>📂</div>
+          <div className={styles.uploadTitle}>Upload CSV / Excel</div>
+          <div className={styles.uploadBtn}>Choose File</div>
+
           <input
             type="file"
             accept=".csv, .xlsx, .xls"
             onChange={handleFileUpload}
           />
-        </div>
+        </label>
 
         <div className={styles.section}>
           <label>Numbers</label>
@@ -136,14 +153,42 @@ function Compose() {
           />
         </div>
 
-        <div className={styles.count}>{numberList.length} recipients</div>
+        <div className={styles.count}>
+          {numberList.length} recipients
+        </div>
       </div>
 
       <div className={styles.chat}>
         <div className={styles.header}>
+          <button
+            className={styles.menuBtn}
+            onClick={() => setShowSidebar((prev) => !prev)}
+          >
+            ☰
+          </button>
           <h2>Compose Message</h2>
           <span>{numberList.length} selected</span>
         </div>
+
+        <div className={styles.empty}>
+          <p>Start typing your message below</p>
+        </div>
+
+        {files.length > 0 && (
+          <div className={styles.previewBox}>
+            {files.map((file, i) => (
+              <div key={i} className={styles.previewItem}>
+                {previews[i] ? (
+                  <img src={previews[i]} alt="preview" />
+                ) : (
+                  <div className={styles.filePreview}>
+                    📎 {file.name}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className={styles.inputBar}>
           <input
@@ -152,21 +197,32 @@ function Compose() {
             placeholder="Type your message..."
           />
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            onChange={handleFileChange}
-          />
+          <div className={styles.fileActions}>
+            <label className={styles.iconBtn}>
+              📎
+              <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                hidden
+              />
+            </label>
 
-          {files.length > 0 && (
-            <div style={{ fontSize: "12px" }}>
-              📎 {files.length} files selected
-            </div>
-          )}
+            <label className={styles.iconBtn}>
+              🖼️
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={handleFileChange}
+                hidden
+              />
+            </label>
+          </div>
 
           <button onClick={handleSend} disabled={loading}>
-            {loading ? "Sending..." : "Send"}
+            {loading ? <div className={styles.loader}></div> : "Send"}
           </button>
         </div>
       </div>
