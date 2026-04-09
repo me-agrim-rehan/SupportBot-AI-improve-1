@@ -1,7 +1,6 @@
 import express from "express";
 import multer from "multer";
 import fs from "fs";
-import path from "path";
 
 import { sendMessage, uploadMedia } from "../../services/whatsapp.js";
 import { addMessage } from "../../store/conversations.js";
@@ -60,24 +59,24 @@ const normalizeNumbers = (input) => {
   }
 
   return numbers
-    .map((n) => String(n).replace(/\D/g, "")) // keep digits only
-    .filter((n) => n.length >= 10); // basic validation
+    .map((n) => String(n).replace(/\D/g, ""))
+    .filter((n) => n.length >= 10);
 };
 
 /**
- * 🔥 SEND (single OR multiple numbers)
+ * 🔥 SEND (multi-file supported)
  */
 router.post(
   "/send",
-  requireAdmin, // ✅ secure route
-  upload.single("file"), // ✅ changed from "image"
+  requireAdmin,
+  upload.array("files", 5), // ✅ IMPORTANT CHANGE
   async (req, res) => {
     let { to, message } = req.body;
 
     console.log("📥 Incoming request:", {
       to,
       message,
-      file: req.file?.originalname,
+      files: req.files?.map((f) => f.originalname),
     });
 
     // ✅ normalize numbers
@@ -87,35 +86,36 @@ router.post(
       return res.status(400).json({ error: "No valid numbers provided" });
     }
 
-    if (!message && !req.file) {
+    if (!message && (!req.files || req.files.length === 0)) {
       return res.status(400).json({ error: "Message or file is required" });
     }
 
     /**
-     * 🔥 UPLOAD MEDIA (ONCE ONLY)
+     * 🔥 UPLOAD MULTIPLE MEDIA
      */
-    let media = null;
+    let mediaList = [];
 
-    if (req.file) {
+    if (req.files && req.files.length > 0) {
       try {
-        const uploadRes = await uploadMedia(req.file.path);
+        for (const file of req.files) {
+          const uploadRes = await uploadMedia(file.path);
 
-        media = {
-          id: uploadRes.id,
-          mimeType: uploadRes.mimeType,
-          filename: uploadRes.filename,
-        };
+          mediaList.push({
+            id: uploadRes.id,
+            mimeType: uploadRes.mimeType,
+            filename: uploadRes.filename,
+          });
+
+          safeUnlink(file.path); // cleanup immediately
+        }
       } catch (err) {
-        safeUnlink(req.file.path);
+        req.files.forEach((f) => safeUnlink(f.path));
         return res.status(500).json({ error: err.message });
       }
-
-      // cleanup after upload
-      safeUnlink(req.file.path);
     }
 
     /**
-     * 🔥 SEND LOOP (with isolation)
+     * 🔥 SEND LOOP
      */
     const results = [];
 
@@ -123,17 +123,38 @@ router.post(
       try {
         console.log(`📨 Sending to ${number}...`);
 
-        const messageId = await sendMessage(number, message, media);
+        // ✅ TEXT ONLY
+        if (mediaList.length === 0) {
+          const messageId = await sendMessage(number, message, null);
 
-        if (!messageId) throw new Error("Send failed");
+          if (!messageId) throw new Error("Send failed");
 
-        await addMessage(
-          number,
-          "outgoing",
-          message || "[media]",
-          messageId,
-          "sent",
-        );
+          await addMessage(number, "outgoing", message, messageId, "sent");
+        } else {
+          // ✅ MULTIPLE MEDIA (WhatsApp compliant)
+          for (let i = 0; i < mediaList.length; i++) {
+            const media = mediaList[i];
+
+            const messageId = await sendMessage(
+              number,
+              i === 0 ? message : null, // caption only once
+              media,
+            );
+
+            if (!messageId) throw new Error("Send failed");
+
+            // 🔥 rate safety (IMPORTANT)
+            await new Promise((r) => setTimeout(r, 150));
+          }
+
+          await addMessage(
+            number,
+            "outgoing",
+            message || "[media]",
+            "multi",
+            "sent",
+          );
+        }
 
         results.push({ number, status: "sent" });
       } catch (err) {
@@ -145,7 +166,9 @@ router.post(
           error: err.message,
         });
       }
-      await new Promise((r) => setTimeout(r, 100));
+
+      // 🔥 per-user delay (prevents rate limit)
+      await new Promise((r) => setTimeout(r, 120));
     }
 
     /**
