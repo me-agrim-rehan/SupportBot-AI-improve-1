@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../../../API/api";
 import { useParams } from "react-router-dom";
+import styles from "./styles/DepartmentDetails.module.css";
 
 export default function DepartmentDetails() {
   const [agents, setAgents] = useState([]);
@@ -36,44 +37,88 @@ export default function DepartmentDetails() {
   };
 
   return (
-    <div style={{ padding: "24px" }}>
-      <h2>🏢 {name} - Agents</h2>
+ <div className={styles.container}>
+  <h2 className={styles.title}>🏢 {name} - Agents</h2>
 
-      <table style={{ width: "100%", marginTop: "20px" }}>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Country</th>
-            <th>Messages</th>
-            <th>Closed</th>
-            <th>Avg Response</th>
-            <th>First Response</th>
-          </tr>
-        </thead>
+  <div className={styles.tableContainer}>
+    <table className={styles.table}>
+      <thead className={styles.thead}>
+        <tr>
+          <th className={styles.th}>#</th>
+          <th className={styles.th}>Agent</th>
+          <th className={styles.th}>Role</th>
+          <th className={styles.th}>Country</th>
+          <th className={styles.th}>Messages</th>
+          <th className={styles.th}>Closed</th>
+          <th className={styles.th}>Avg Response</th>
+          <th className={styles.th}>First Response</th>
+        </tr>
+      </thead>
 
-        <tbody>
-          {sorted.map((u, i) => (
-            <tr key={u.id}>
-              <td>#{i + 1}</td>
-              <td>{u.name}</td>
-              <td>{u.role}</td>
-              <td>{u.country || "—"}</td>
-              <td>{u.message_count}</td>
-              <td>{u.conversations_closed}</td>
+      <tbody>
+        {sorted.map((u, i) => {
+          const isTop = i === 0;
 
-              <td style={{ color: getColor(u.avg_response_time) }}>
-                {formatTime(u.avg_response_time)}
+          return (
+            <tr
+              key={u.id}
+              className={`${styles.tr} ${isTop ? styles.topAgent : ""}`}
+            >
+              <td className={`${styles.td} ${styles.rank}`}>
+                #{i + 1}
               </td>
 
-              <td style={{ color: getColor(u.first_response_time) }}>
-                {formatTime(u.first_response_time)}
+              <td className={`${styles.td} ${styles.nameCell}`}>
+                {u.name}
+                <div className={styles.subText}>{u.role}</div>
+              </td>
+
+              <td className={styles.td}>{u.role}</td>
+
+              <td className={styles.td}>
+                {u.country || "—"}
+              </td>
+
+              <td className={styles.td}>
+                {u.message_count || 0}
+              </td>
+
+              <td className={styles.td}>
+                {u.conversations_closed || 0}
+              </td>
+
+              <td className={styles.td}>
+                <span
+                  className={
+                    u.avg_response_time < 60
+                      ? styles.green
+                      : u.avg_response_time < 180
+                      ? styles.orange
+                      : styles.red
+                  }
+                >
+                  {formatTime(u.avg_response_time)}
+                </span>
+              </td>
+
+              <td className={styles.td}>
+                <span
+                  className={
+                    u.first_response_time < 60
+                      ? styles.green
+                      : u.first_response_time < 180
+                      ? styles.orange
+                      : styles.red
+                  }
+                >
+                  {formatTime(u.first_response_time)}
+                </span>
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+</div> );  
 }

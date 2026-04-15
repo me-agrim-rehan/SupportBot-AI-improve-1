@@ -33,9 +33,8 @@ export default function Login() {
           {/* GREEN PANEL */}
           <div className={styles.left}>
             <div>
-              Experts <br />
-              On <br />
-              Demand
+              <p className = {styles.get_login}>GET</p> at <br />
+              a Glance
             </div>
           </div>
 

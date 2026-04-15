@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import API from "../../../API/api";
 import { useNavigate } from "react-router-dom";
+import styles from "./styles/analytics.module.css";
 
 export default function DepartmentOverview() {
   const [agents, setAgents] = useState([]);
@@ -60,36 +61,70 @@ export default function DepartmentOverview() {
   };
 
   return (
-    <div style={{ padding: "24px" }}>
-      <h2>📊 Department Overview</h2>
+    <div className={styles.container}>
+      <h2 className={styles.title}>📊 Department Overview</h2>
 
-      <div style={{ display: "grid", gap: "16px", marginTop: "20px" }}>
+      <div className={styles.grid}>
         {departments.map((d) => (
           <div
             key={d.name}
-            onClick={() => navigate(`/analytics/departments/${d.name}`)}
-            style={{
-              padding: "16px",
-              borderRadius: "12px",
-              background: "white",
-              border: "1px solid #eee",
-              cursor: "pointer",
-              transition: "0.2s",
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)")
+            onClick={() =>
+              navigate(`/analytics/departments/${encodeURIComponent(d.name)}`)
             }
-            onMouseLeave={(e) => (e.currentTarget.style.boxShadow = "none")}
+            className={styles.card}
           >
-            <h3>🏢 {d.name}</h3>
+            {/* Header */}
+            <div className={styles.header}>
+              <span className={styles.name}>🏢 {d.name}</span>
+            </div>
 
-            <p>📩 Messages: {d.total_messages}</p>
-            <p>✅ Closed: {d.total_closed}</p>
-            <p>⏱ Avg Response: {formatTime(d.avg_response)}</p>
-            <p>⚡ First Response: {formatTime(d.first_response)}</p>
+            {/* Main Stats */}
+            <div className={styles.statsRow}>
+              <div className={styles.statBlock}>
+                <span className={styles.label}>Messages</span>
+                <span className={styles.value}>{d.total_messages}</span>
+              </div>
+
+              <div className={styles.statBlock}>
+                <span className={styles.label}>Closed</span>
+                <span className={styles.value}>{d.total_closed}</span>
+              </div>
+            </div>
+
+            {/* Bottom Metrics */}
+            <div className={styles.metric}>
+              ⏱ Avg
+              <span
+                className={
+                  d.avg_response < 60
+                    ? styles.green
+                    : d.avg_response < 180
+                      ? styles.orange
+                      : styles.red
+                }
+              >
+                {formatTime(d.avg_response)}
+              </span>
+            </div>
+
+            <div className={styles.metric}>
+              ⚡ First
+              <span
+                className={
+                  d.first_response < 60
+                    ? styles.green
+                    : d.first_response < 180
+                      ? styles.orange
+                      : styles.red
+                }
+              >
+                {formatTime(d.first_response)}
+              </span>
+            </div>
           </div>
         ))}
       </div>
-    </div>
-  );
+    </div>);
+
 }
+
