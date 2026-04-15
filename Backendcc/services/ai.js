@@ -42,12 +42,26 @@ import { yesWords, noWords } from "../services/departments.js";
 ========================= */
 
 export async function processMessage(user, text) {
+
+  const msg = text.toLowerCase().trim();
+
+  // 🔥 END CONVERSATION (MUST BE FIRST BEFORE HUMAN BLOCK)
+  if (
+    userState[user] === "human_active" &&
+    msg.includes("end conversation")
+  ) {
+    delete userState[user];
+    delete predictedDept[user];
+    delete collectedInfo[user];
+    greetedUsers[user] = false;
+
+    return "🛑 The conversation was ended by the crew.";
+  }
+
   // 🚫 HARD BLOCK: if human is active, AI should not respond
   if (userState[user] === "human_active") {
     return null;
   }
-
-  const msg = text.toLowerCase().trim();
 
   if (!departments.length) {
     await loadDepartments();

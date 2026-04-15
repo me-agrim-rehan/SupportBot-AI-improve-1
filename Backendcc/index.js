@@ -43,8 +43,8 @@ app.use(
     rolling: true,
     cookie: {
       httpOnly: true,
-      secure: true,          // ✅ MUST be true on HTTPS (Render)
-      sameSite: "none",      // ✅ MUST be none for cross-origin
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7,
     }
   }),
