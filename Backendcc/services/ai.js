@@ -9,6 +9,10 @@ import { pool } from "../db.js"; // ✅ ADD
 
 let departments = []; // 🔥 will replace static import
 
+function isValidName(name) {
+  return /^[a-zA-Z\s]{2,50}$/.test(name.trim());
+}
+
 // load once
 async function loadDepartments() {
   const res = await pool.query(`SELECT id, name FROM departments ORDER BY id`);
@@ -29,6 +33,7 @@ const openai = new OpenAI({
 const userState = {};
 const predictedDept = {};
 const greetedUsers = {};
+const collectedInfo = {};
 
 import { yesWords, noWords } from "../services/departments.js";
 
@@ -38,12 +43,12 @@ import { yesWords, noWords } from "../services/departments.js";
 
 export async function processMessage(user, text) {
   // 🚫 HARD BLOCK: if human is active, AI should not respond
-if (userState[user] === "human_active") {
-  return null;
-}
+  if (userState[user] === "human_active") {
+    return null;
+  }
+
   const msg = text.toLowerCase().trim();
 
-  
   if (!departments.length) {
     await loadDepartments();
   }
@@ -68,19 +73,21 @@ if (userState[user] === "human_active") {
     if (yesWords.some((w) => msg.includes(w))) {
       const dept = predictedDept[user];
 
+      // General Inquiry → AI chat
       if (dept.name === "General Inquiry") {
         userState[user] = "ai_chat";
-
         return "Sure! I'll help you with that.";
       }
 
-      startHumanSession(user, dept.id); // 🔥 ONLY CHANGE
+      // Other departments → start data collection
+      collectedInfo[user] = {
+        deptId: dept.id,
+        deptName: dept.name
+      };
 
-      userState[user] = "human_active";
-      delete userState[user];
-      delete predictedDept[user];
+      userState[user] = "awaiting_user_name";
 
-      return `✅ Connecting you to *${dept.name}* team. A human will reply shortly.`;
+      return "Great 👍 Please enter your full name:";
     }
 
     if (noWords.some((w) => msg.includes(w))) {
@@ -96,6 +103,45 @@ if (userState[user] === "human_active") {
     }
 
     return "Please reply Yes or No.";
+  }
+
+  /* =========================
+     USER NAME COLLECTION
+  ========================= */
+
+  if (userState[user] === "awaiting_user_name") {
+    if (!isValidName(text)) {
+      return "❌ Please enter a valid name (letters only).";
+    }
+
+    collectedInfo[user].name = text.trim();
+    userState[user] = "awaiting_client_name";
+
+    return "Thanks! Now please enter your client name:";
+  }
+
+  /* =========================
+     CLIENT NAME COLLECTION
+  ========================= */
+
+  if (userState[user] === "awaiting_client_name") {
+    if (!isValidName(text)) {
+      return "❌ Please enter a valid client name (letters only).";
+    }
+
+    const info = collectedInfo[user];
+
+    info.clientName = text.trim();
+
+    // 👉 NOW CONNECT HUMAN HERE
+    startHumanSession(user, info.deptId);
+
+    userState[user] = "human_active";
+
+    delete predictedDept[user];
+    delete collectedInfo[user];
+
+    return `✅ Connecting you to *${info.deptName}* team.\nName: ${info.name}\nClient: ${info.clientName}`;
   }
 
   /* MANUAL SELECT */
@@ -229,6 +275,7 @@ User message:
     return departments.find((d) => d.name === "General Inquiry");
   }
 }
+
 export function resetUserState(user) {
   delete userState[user];
   delete predictedDept[user];
