@@ -675,6 +675,12 @@ router.post("/end", async (req, res) => {
       return res.status(409).json({
         error: "Chat already ended",
       });
+      // 📤 Notify user
+      await sendMessage(
+        c.sender_id,
+        "🛑 This chat has been ended by the agent.",
+        null
+      );
     }
 
     // 🔁 RESET AI STATE HERE (ONLY HERE)
@@ -682,9 +688,12 @@ router.post("/end", async (req, res) => {
       if (mod.resetUserState) {
         mod.resetUserState(c.sender_id);
       }
-    });
 
-    return res.json({ success: true });
+      // ✅ ALSO reset greeting
+      if (mod.greetedUsers) {
+        mod.greetedUsers[c.sender_id] = false;
+      }
+    });
 
     return res.json({ success: true });
   } catch (err) {

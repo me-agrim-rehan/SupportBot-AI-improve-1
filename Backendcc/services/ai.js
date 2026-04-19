@@ -32,7 +32,7 @@ const openai = new OpenAI({
 
 const userState = {};
 const predictedDept = {};
-const greetedUsers = {};
+export const greetedUsers = {};
 const collectedInfo = {};
 
 import { yesWords, noWords } from "../services/departments.js";
@@ -44,6 +44,11 @@ import { yesWords, noWords } from "../services/departments.js";
 export async function processMessage(user, text) {
 
   const msg = text.toLowerCase().trim();
+
+  // 🔥 FORCE RESET ON NEW GREETING AFTER CHAT ENDED
+if (isGreeting(msg) && !userState[user]) {
+  greetedUsers[user] = false;
+}
 
   // 🔥 END CONVERSATION (MUST BE FIRST BEFORE HUMAN BLOCK)
   if (
@@ -78,8 +83,22 @@ export async function processMessage(user, text) {
   /* AI CHAT MODE */
 
   if (userState[user] === "ai_chat") {
-    return await runAIChat(user, text);
+
+  const department = await predictDepartment(text);
+
+  if (department.name !== "General Inquiry") {
+    predictedDept[user] = department;
+    userState[user] = "awaiting_confirmation";
+
+    return `It looks like you want *${department.name}*.
+
+Do you want me to connect you?
+
+Reply Yes or No`;
   }
+
+  return await runAIChat(user, text);
+}
 
   /* CONFIRMATION */
 
@@ -178,7 +197,6 @@ export async function processMessage(user, text) {
     startHumanSession(user, selectedDept.id); // 🔥 ONLY CHANGE
 
     userState[user] = "human_active";
-    delete userState[user];
     delete predictedDept[user];
 
     return `✅ Connecting you to *${selectedDept.name}* team. A human will reply shortly.`;
@@ -213,18 +231,23 @@ async function runAIChat(user, text) {
   formatted.push(`User: ${text}`);
 
   const prompt = `
-You are a friendly company WhatsApp assistant.
+You are a WhatsApp assistant for GET Global Group.
 
-Language rules:
-- Detect the user's language automatically.
-- The user may speak English, Hindi, Hinglish, or a mix.
-- Always reply in the SAME language the user used.
-- If the message is mixed, reply in a natural mixed style.
+STRICT LANGUAGE RULE (VERY IMPORTANT):
+- Detect user's language
+- Reply ONLY in english language
+- If Hindi → reply english 
+- If Hinglish → reply english
 
-Other rules:
-- Keep answers short
-- Maximum 3 sentences
-- Be professional
+Company:
+- Website: https://getglobalgroup.com/
+- Services: Expertise Based Services, Procurement And Supply Chain Management, Integrated Maintenance Solutions, On Demand Energy Service
+
+Rules:
+- Max 3 sentences
+- professional and warm tone
+- If you don't know the answer, say "Sorry, I don't have that information right now."
+
 
 Conversation:
 ${formatted.join("\n")}
@@ -252,21 +275,21 @@ async function predictDepartment(text) {
   const deptList = departments.map((d) => d.name).join("\n");
 
   const prompt = `
-You are an AI that routes messages to departments.
+You are a smart routing AI.
 
-The user may write in:
-- English
-- Hindi
-- Hinglish
-- Mixed language
+Detect if user INTENDS to talk to a department.
 
-Understand the meaning and choose the best department.
+Examples:
+- "I need visa help" → Visa Department
+- "connect me to sales" → Sales
+- "pricing?" → Sales
 
-Return ONLY the department name from this list:
+Return ONLY department name.
 
+Departments:
 ${deptList}
 
-User message:
+Message:
 "${text}"
 `;
 
@@ -290,7 +313,19 @@ User message:
   }
 }
 
+
+function isGreeting(msg) {
+  return ["hi", "hello", "hey", "start"].some((w) =>
+    msg.includes(w)
+  );
+}
+
+
 export function resetUserState(user) {
   delete userState[user];
   delete predictedDept[user];
+  delete collectedInfo[user];
+
+  greetedUsers[user] = false;
 }
+
